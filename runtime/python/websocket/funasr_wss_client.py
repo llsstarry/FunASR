@@ -235,9 +235,9 @@ async def record_from_scp(chunk_begin, chunk_size):
 
     if not args.mode == "offline":
         await asyncio.sleep(2)
-    # offline model need to wait for message recved
+    # offline and 2pass models need to wait for message recved
 
-    if args.mode == "offline":
+    if args.mode == "offline" or args.mode == "2pass":
         global offline_msg_done
         while not offline_msg_done:
             await asyncio.sleep(1)
@@ -266,7 +266,8 @@ async def message(id):
             wav_name = meg.get("wav_name", "demo")
             text = meg["text"]
             timestamp = ""
-            offline_msg_done = meg.get("is_final", False)
+            if args.mode != "2pass":
+                offline_msg_done = meg.get("is_final", False)
             if "timestamp" in meg:
                 timestamp = meg["timestamp"]
 
@@ -302,10 +303,12 @@ async def message(id):
                     text_print_2pass_online = ""
                     text_print = text_print_2pass_offline + "{}".format(text)
                     text_print_2pass_offline += "{}".format(text)
+                    # is_final mirrors is_speaking: False means speech has ended (this is the final result)
+                    if meg.get("is_final") is False:
+                        offline_msg_done = True
                 text_print = text_print[-args.words_max_print :]
                 os.system("clear")
                 print("\rpid" + str(id) + ": " + text_print)
-                # offline_msg_done=True
 
     except Exception as e:
         print("Exception:", e)
